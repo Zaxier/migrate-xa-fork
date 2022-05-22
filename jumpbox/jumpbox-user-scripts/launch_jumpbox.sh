@@ -34,6 +34,15 @@ ALREADY_EXISTING_JUMPBOX_ID=$(aws ec2 describe-instances --query 'Reservations[*
 if [ ! -z "$ALREADY_EXISTING_JUMPBOX_ID" ]; then
   echo "Jumpbox wm-$whoami already exists with id of $ALREADY_EXISTING_JUMPBOX_ID. The instance is in running, pending, stopping, or stopped state."
   echo "Terminate the instance if you want to launch a new jumpbox instance."
+
+  echo
+  PUBLIC_DNS=$(aws ec2 describe-instances --instance-ids $ALREADY_EXISTING_JUMPBOX_ID --region $REGION --profile $AWS_PROFILE | jq .Reservations | jq .'[].Instances' | jq -r .'[].PublicDnsName')
+  echo "==============================================================="
+  echo "Ssh into your jumpbox using the following command: "
+  echo "ssh -i \$KEY_NAME.pem ec2-user@$PUBLIC_DNS"
+  echo "e.g. ssh -i $KEY_NAME-$REGION.pem ec2-user@$PUBLIC_DNS"
+  echo "==============================================================="
+
   exit 1
 fi
 echo "User does not have a running jumpbox in the $REGION."
@@ -62,7 +71,7 @@ INSTANCE_STATE="Not Ready"
 while [[ $INSTANCE_STATE != "running" ]]
 do
     echo "Instance $INSTANCE_ID is in $INSTANCE_STATE state. Waiting for the instance to be in running state. Checking again in 5 seconds.."
-    INSTANCE_STATE=$(aws ec2 describe-instance-status --instance-ids $INSTANCE_ID --region $REGION --profile aws-field-eng_databricks-power-user | jq .InstanceStatuses | jq -r .'[].InstanceState.Name')
+    INSTANCE_STATE=$(aws ec2 describe-instance-status --instance-ids $INSTANCE_ID --region $REGION --profile $AWS_PROFILE | jq .InstanceStatuses | jq -r .'[].InstanceState.Name')
     if [ -z $INSTANCE_STATE ]; then
       INSTANCE_STATE="Not Ready"
     fi
